@@ -1,0 +1,27 @@
+SELECT db_name
+          ,schema_name
+          --,table_name
+          ,sum(row_count)
+          ,sum(size_in_gb)
+    FROM (SELECT id        table_id
+               ,datname   db_name
+               ,nspname   schema_name
+               ,relname   table_name
+               ,SUM(rows) row_count
+           FROM stv_tbl_perm
+           JOIN pg_class
+             ON pg_class.oid = stv_tbl_perm.id
+           JOIN pg_namespace
+             ON pg_namespace.oid = relnamespace
+           JOIN pg_database
+             ON pg_database.oid = stv_tbl_perm.db_id
+          GROUP BY id, datname, nspname, relname
+          ORDER BY id, datname, nspname, relname) tbl_det
+    JOIN (SELECT tbl table_id
+               ,ROUND(CONVERT(REAL,COUNT(*))/1024,2) size_in_gb
+           FROM stv_blocklist bloc
+          GROUP BY tbl) tbl_size
+     ON tbl_size.table_id = tbl_det.table_id
+     GROUP BY db_name
+          ,schema_name
+    ;
